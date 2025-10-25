@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Welcome.</title>
+<style>
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: "Courier New", monospace;
+    color: #fff;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: url('https://images.pexels.com/photos/1421903/pexels-photo-1421903.jpeg?cs=srgb&dl=pexels-eberhardgross-1421903.jpg&fm=jpg') no-repeat center center fixed;
+    background-size: cover;
+    font-family: "Courier New", monospace;
+    color: #fff;
+}
+
+
+#audioBg { display: none; }
+
+#overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #000;
+    color: #f00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 5;
+    text-align: center;
+    cursor: pointer;
+    font-size: 3em;
+}
+
+#overlay span {
+    display: block;
+    font-size: 1.5em;
+    margin-top: 20px;
+    color: #fff;
+}
+
+#userInfo {
+    position: fixed;
+    bottom: 0; left: 0;
+    width: 50%; height: 25%;
+    overflow: hidden;
+    font-size: 0.85em;
+    line-height: 1.3em;
+    color: #fff;
+    z-index: 3;
+    padding: 10px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.userLine {
+    opacity: 1;
+    transition: opacity 2s linear;
+    white-space: pre;
+    margin: 0;
+}
+
+#webcamCard {
+    position: fixed;
+    top: 10px; right: 10px;
+    width: 300px; height: 300px;
+    background: #111;
+    border: 2px solid #fff;
+    z-index: 4;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#webcamVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+</style>
+</head>
+<body>
+
+<video id="bgVideo" autoplay loop muted playsinline>
+    <source src="Bgvid.mp4" type="video/mp4">
+</video>
+<audio id="audioBg" autoplay loop src="audio.mp3"></audio>
+
+<div id="overlay">
+    IF YOUR SCREENSHARING GO BACK NOW!
+    <span>Double click to enter site</span>
+</div>
+
+<div id="userInfo"></div>
+<div id="webcamCard">
+    <video id="webcamVideo" autoplay playsinline muted></video>
+</div>
+
+<script>
+const overlay = document.getElementById('overlay');
+const userInfo = document.getElementById('userInfo');
+const webcamVideo = document.getElementById('webcamVideo');
+
+overlay.ondblclick = () => {
+    overlay.style.display = 'none';
+    startDashboard();
+};
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+    if (e.key === 'F12') e.preventDefault();
+    if (e.ctrlKey && e.shiftKey && ['I','C','J'].includes(e.key.toUpperCase())) e.preventDefault();
+    if (e.ctrlKey && ['U','S','H'].includes(e.key.toUpperCase())) e.preventDefault();
+});
+
+async function startDashboard() {
+    // Fetch IP info
+    const ipData = await fetch('https://ipapi.co/json/')
+        .then(r => r.json())
+        .catch(() => ({
+            ip: 'Unavailable',
+            city: 'Unknown',
+            country_name: 'Unknown',
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+        }));
+
+    const mem = navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'Unavailable';
+    const battery = await (navigator.getBattery ? navigator.getBattery() : Promise.resolve({level:null, charging:null}));
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+
+    const gpuInfo = () => {
+        try {
+            const c = document.createElement('canvas');
+            const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+            if (!gl) return {vendor:'Unavailable', renderer:'Unavailable'};
+            const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+            return dbg ? {
+                vendor: gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL),
+                renderer: gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)
+            } : {
+                vendor: gl.getParameter(gl.VENDOR),
+                renderer: gl.getParameter(gl.RENDERER)
+            };
+        } catch {
+            return {vendor:'Unavailable', renderer:'Unavailable'};
+        }
+    };
+
+    const gpu = gpuInfo();
+
+    const lines = [
+        `IP: ${ipData.ip}`,
+        `Location: ${ipData.city}, ${ipData.country_name}`,
+        `Screen: ${window.screen.width}x${window.screen.height}`,
+        `Color Depth: ${window.screen.colorDepth}`,
+        `Device Pixel Ratio: ${window.devicePixelRatio}`,
+        `Browser: ${navigator.userAgent}`,
+        `Platform: ${navigator.platform}`,
+        `Language: ${navigator.language}`,
+        `Timezone: ${ipData.timezone}`,
+        `Current Time: ${new Date().toLocaleString()}`,
+        `Device Memory: ${mem}`,
+        `CPU Cores: ${navigator.hardwareConcurrency || 'Unavailable'}`,
+        `Battery Level: ${battery.level !== null ? Math.round(battery.level * 100) + '%' : 'Unavailable'}`,
+        `Charging: ${battery.charging !== null ? battery.charging ? 'Yes' : 'No' : 'Unavailable'}`,
+        `Connection: ${conn ? `Type:${conn.effectiveType || 'unknown'} Downlink:${conn.downlink || 'unknown'}Mbps RTT:${conn.rtt || 'unknown'}ms` : 'Unavailable'}`,
+        `GPU Vendor: ${gpu.vendor}`,
+        `GPU Renderer: ${gpu.renderer}`,
+        `Touch Support: ${('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 'Yes' : 'No'}`,
+        `Plugins: ${Array.from(navigator.plugins || []).map(p => p.name).join(', ') || 'None'}`,
+        `MIME Types: ${Array.from(navigator.mimeTypes || []).map(m => m.type).join(', ') || 'None'}`
+    ];
+
+    startTyping(lines);
+    startCamera();
+}
+
+function startTyping(lines) {
+    let infoIndex = 0;
+
+    function typeNextLine() {
+        if (infoIndex >= lines.length) infoIndex = 0;
+        const line = lines[infoIndex++];
+        let charIndex = 0;
+        let currentLine = '';
+        const div = document.createElement('div');
+        div.className = 'userLine';
+        userInfo.appendChild(div);
+
+        function typeChar() {
+            if (charIndex < line.length) {
+                currentLine += line[charIndex++];
+                div.textContent = currentLine;
+                userInfo.scrollTop = userInfo.scrollHeight;
+                setTimeout(typeChar, Math.random() * 80 + 30);
+            } else {
+                setTimeout(() => { div.style.opacity = '0'; }, 14000);
+                setTimeout(typeNextLine, 500);
+            }
+        }
+
+        typeChar();
+    }
+
+    typeNextLine();
+}
+
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 300 }, height: { ideal: 300 } }, audio: false });
+        webcamVideo.srcObject = stream;
+    } catch(e) {
+        console.warn('Webcam access denied or unavailable.');
+    }
+}
+</script>
+
+</body>
+</html>
